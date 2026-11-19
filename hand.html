@@ -18,6 +18,35 @@
     padding: 12px 16px; font-size: 17px; line-height: 1.45; box-shadow: 0 4px 16px rgba(0,0,0,.3);
     transition: opacity .4s; }
   #hint b { color: #1d6fb8; }
+  #held { display: none; position: fixed; left: 50%; transform: translateX(-50%); top: calc(max(10px, env(safe-area-inset-top)) + 52px);
+    z-index: 10; background: rgba(11,37,69,.72); color: #fff; border-radius: 999px; padding: 6px 14px;
+    font-size: 13px; white-space: nowrap; pointer-events: none; }
+  #bPin { display: none; position: fixed; right: 10px; top: max(10px, env(safe-area-inset-top)); z-index: 11; height: 42px;
+    border: 0; border-radius: 21px; padding: 0 16px; font: inherit; font-size: 15px; font-weight: 700; color: #0b2545;
+    background: rgba(255,255,255,.95); box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 12; pointer-events: none; }
+  #dock { display: none; position: fixed; left: 10px; right: 10px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 11; }
+  #card { display: none; background: rgba(255,255,255,.96); color: #0b2545; border-radius: 18px; padding: 12px 14px 10px;
+    margin-bottom: 8px; box-shadow: 0 6px 22px rgba(0,0,0,.35); border: 3px solid transparent; }
+  #card.ok { border-color: #2e9e5b; } #card.no { border-color: #e2574c; }
+  #card.shake { animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-7px); } 50% { transform: translateX(7px); } 75% { transform: translateX(-4px); } }
+  #cardHead { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 19px; line-height: 1.25; }
+  #cardIcon { font-size: 24px; }
+  #cardText { font-size: 16px; line-height: 1.45; margin-top: 4px; }
+  #chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  #chips:empty { display: none; }
+  .chip { min-width: 38px; height: 38px; border-radius: 19px; border: 2px solid #1d6fb8; background: #fff; color: #1d6fb8;
+    font: inherit; font-size: 16px; font-weight: 700; padding: 0 10px; }
+  .chip.on { background: #1d6fb8; color: #fff; }
+  .star { font-size: 28px; line-height: 1; color: #cfd8e3; transition: color .3s, transform .3s; }
+  .star.on { color: #ffb300; transform: scale(1.15); }
+  #btns { display: flex; gap: 8px; }
+  #btns button { flex: 1; height: 50px; border: 0; border-radius: 25px; font: inherit; font-size: 17px; font-weight: 700;
+    color: #fff; background: #1d6fb8; box-shadow: 0 4px 14px rgba(0,0,0,.35); white-space: nowrap; }
+  #btns #bQuiz { background: #e8590c; } #btns #bClose { background: #5c6b7a; flex: 0 0 96px; }
+  #btns #bVoice { flex: 0 0 54px; background: rgba(255,255,255,.95); color: #0b2545; font-size: 21px; }
+  html, body, #stage { touch-action: none; }
   #hint.found { opacity: .0; pointer-events: none; }
   #loading { position: fixed; inset: 0; z-index: 15; background: #eaf5ff; color: #0b2545;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -37,18 +66,25 @@
 <body>
 <div id="loading">กำลังโหลดระบบ AR…<div id="step" style="font-size:15px;color:#557;margin-top:6px"></div>
   <div class="bar"><i id="prog"></i></div></div>
-<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้<div id="dbg" style="font-size:11px;color:#889;margin-top:4px">v5</div></div>
+<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด สแกนครั้งเดียว แล้วดึงโทรศัพท์ออกได้ โมเดลจะอยู่บนจอ<div id="dbg" style="font-size:11px;color:#889;margin-top:4px">v7</div></div>
 <div id="err">
   <b id="errTitle">เปิดกล้องไม่ได้</b><br>
   <span id="errMsg">กรุณากด "อนุญาต" ให้ใช้กล้อง แล้วโหลดหน้านี้ใหม่ หรือเปิดหน้านี้ใน Chrome (Android) หรือ Safari (iPhone)</span>
   <br><button onclick="location.reload()">ลองใหม่</button><a href="viewer.html">ดูแบบ 3 มิติโดยไม่ใช้กล้อง</a>
   <small id="errDetail"></small>
 </div>
+<div id="held">ลากนิ้วเพื่อหมุน · สองนิ้วย่อ/ขยาย</div>
+<button id="bPin">📌 ตรึงไว้บนจอ</button>
+<canvas id="fx"></canvas>
+<div id="dock">
+  <div id="card"><div id="cardHead"><span id="cardIcon"></span><span id="cardTitle"></span></div><div id="cardText"></div><div id="chips"></div></div>
+  <div id="btns"><button id="bStory">▶ เล่าเรื่อง</button><button id="bClose">✕ ปิด</button><button id="bQuiz">🎯 ภารกิจ</button><button id="bVoice">🔇</button></div>
+</div>
 <div id="stage"></div>
 
 <script>
 (function () {
-  var V = '?v=5';
+  var V = '?v=7';
   // Each library has several mirrors; the first one that loads AND registers what we need wins.
   var LIBS = [
     { name: 'A-Frame', ok: function () { return !!window.AFRAME; }, urls: [
@@ -112,6 +148,320 @@
     return next();
   }
 
+  // ───────────────────────── the "show": pop-up entrance, story mode, tap-the-model mission ─────────────────────────
+  var STEPS = [
+    { g: 'evap', icon: '☀️', title: 'การระเหย', text: 'ความร้อนจากดวงอาทิตย์ทำให้น้ำในทะเลและแม่น้ำระเหยกลายเป็นไอน้ำ ลอยขึ้นสู่อากาศ',
+      q: 'แดดร้อนทำให้น้ำกลายเป็นไอลอยขึ้นฟ้า น้ำส่วนใหญ่ระเหยขึ้นมาจากที่ไหน', hint: 'ใบ้: ดูจุดสีขาวที่ลอยขึ้นจากผิวน้ำกว้าง ๆ' },
+    { g: 'transp', icon: '🌳', title: 'การคายน้ำของพืช', text: 'พืชดูดน้ำจากดินทางราก แล้วคายน้ำออกทางปากใบกลายเป็นไอน้ำ',
+      q: 'สิ่งมีชีวิตชนิดใดดูดน้ำจากดิน แล้วคายน้ำออกทางปากใบ', hint: 'ใบ้: มีลำต้นและใบสีเขียว' },
+    { g: 'condense', icon: '☁️', title: 'การควบแน่น', text: 'ไอน้ำลอยสูงขึ้นไปเจออากาศเย็น จึงควบแน่นเป็นละอองน้ำเล็ก ๆ รวมกันเป็นเมฆ',
+      q: 'ไอน้ำเจออากาศเย็นแล้วควบแน่นเป็นละอองน้ำเล็ก ๆ รวมกันกลายเป็นอะไร', hint: 'ใบ้: ลอยอยู่บนฟ้า สีขาวฟู' },
+    { g: 'rain', icon: '🌧️', title: 'หยาดน้ำฟ้า (ฝน)', text: 'ละอองน้ำในเมฆรวมตัวกันจนใหญ่และหนักขึ้น จึงตกลงมาเป็นฝน',
+      q: 'ละอองน้ำรวมกันจนหนักแล้วตกลงมา แตะเมฆที่ฝนกำลังตก', hint: 'ใบ้: เมฆก้อนนี้สีเทาเข้ม อยู่เหนือภูเขา' },
+    { g: 'runoff', icon: '🏞️', title: 'น้ำไหลกลับสู่แหล่งน้ำ', text: 'น้ำฝนไหลไปตามผิวดินลงสู่ลำธารและแม่น้ำ แล้วไหลกลับลงสู่ทะเล',
+      q: 'น้ำฝนที่ตกบนภูเขาไหลกลับลงสู่ทะเลทางไหน', hint: 'ใบ้: เส้นสีฟ้าที่ไหลลงมาจากภูเขา' },
+    { g: 'groundwater', icon: '💧', title: 'น้ำซึมลงดิน → น้ำใต้ดิน', text: 'น้ำฝนอีกส่วนหนึ่งซึมลงไปในดิน สะสมเป็นน้ำใต้ดิน แล้วค่อย ๆ ไหลกลับสู่ทะเล',
+      q: 'น้ำฝนที่ซึมลงดินไปสะสมอยู่ที่ชั้นไหน แตะที่หน้าตัดดินด้านหน้า', hint: 'ใบ้: ชั้นสีฟ้าที่อยู่ใต้ผิวดิน' }
+  ];
+  var SUMMARY = { icon: '🔄', title: 'วัฏจักรน้ำ', text: 'น้ำหมุนเวียนซ้ำเดิมอย่างต่อเนื่อง ระหว่างน้ำในบรรยากาศ น้ำผิวดิน และน้ำใต้ดิน เรียกว่า วัฏจักรน้ำ' };
+  // names ending with "_" are prefixes (vapour_sea_0, vapour_sea_1, ...)
+  var GROUPS = {
+    evap:        { label: 'label_1_evaporation',   arrow: 'arrow_evaporation',      fx: ['vapour_sea_', 'vapour_river_'], pulse: ['sun'],
+                   hit: ['sea', 'vapour_sea_', 'vapour_river_', 'arrow_evaporation', 'label_1_evaporation', 'label_sea'] },
+    transp:      { label: 'label_2_transpiration', arrow: 'arrow_transpiration',    fx: ['transpiration_'], pulse: [],
+                   hit: ['tree_', 'palm_', 'transpiration_', 'arrow_transpiration', 'label_2_transpiration'] },
+    condense:    { label: 'label_3_condensation',  arrow: 'arrow_wind_to_mountain', fx: [], pulse: ['cloud_white', 'cloud_small'],
+                   hit: ['cloud_white', 'cloud_small', 'arrow_wind_to_mountain', 'label_3_condensation'] },
+    rain:        { label: 'label_4_precipitation', arrow: 'arrow_rain',             fx: ['rain_'], pulse: ['cloud_rain'],
+                   hit: ['cloud_rain', 'rain_', 'arrow_rain', 'label_4_precipitation'] },
+    runoff:      { label: 'label_5_runoff',        arrow: 'arrow_runoff',           fx: ['river_flow_'], pulse: [],
+                   hit: ['river', 'river_flow_', 'arrow_runoff', 'label_5_runoff', 'label_river'] },
+    groundwater: { label: 'label_6_groundwater',   arrow: 'arrow_groundwater',      fx: ['groundwater_flow_'], pulse: [], extra: ['label_gw_layer'],
+                   hit: ['groundwater_layer', 'groundwater_flow_', 'arrow_groundwater', 'label_6_groundwater', 'label_gw_layer'] }
+  };
+  var ACCEPT = { condense: ['condense', 'rain'] };   // any cloud is a fair answer to "what does the vapour turn into"
+
+  function initShow(S, scene, T) {
+    var st = { mode: 'free', step: 0, auto: false, voice: false, quiz: null, ready: false, popped: false };
+    var all = [], root = null, timer = 0, pulseUntil = 0, pulseG = null;
+    window.__ar = { st: st };
+
+    // ── model parts ──
+    function match(name, pat) { return pat.charAt(pat.length - 1) === '_' ? name.indexOf(pat) === 0 : name === pat; }
+    function each(pats, fn) {
+      for (var i = 0; i < all.length; i++) for (var j = 0; j < pats.length; j++)
+        if (match(all[i].name, pats[j])) { fn(all[i]); break; }
+    }
+    function groupOf(obj) {
+      for (var o = obj; o && o !== root; o = o.parent)
+        for (var g in GROUPS) for (var j = 0; j < GROUPS[g].hit.length; j++)
+          if (match(o.name, GROUPS[g].hit[j])) return g;
+      return null;
+    }
+    function shown(obj) { for (var o = obj; o; o = o.parent) if (!o.visible) return false; return true; }
+    $('model').addEventListener('model-loaded', function () {
+      root = $('model').getObject3D('mesh');
+      root.traverse(function (o) { all.push(o); o.userData.s0 = o.scale.clone(); });
+      st.ready = true; applyView();
+    });
+
+    // which labels / arrows / moving dots are visible in the current mode
+    function applyView() {
+      if (!root) return;
+      for (var g in GROUPS) {
+        var G = GROUPS[g], lab = true, fx = true;
+        if (st.mode === 'story' && st.step < STEPS.length) lab = fx = (STEPS[st.step].g === g);
+        if (st.mode === 'quiz') lab = !!st.quiz.solved[g];
+        (function (lab, fx, G) {
+          each([G.label, G.arrow].concat(G.extra || []), function (o) { o.visible = lab; });
+          each(G.fx, function (o) { o.visible = fx; });
+        })(lab, fx, G);
+      }
+    }
+    function pulse(g, ms) { pulseG = g; pulseUntil = performance.now() + ms; }
+    function resetScale() { for (var i = 0; i < all.length; i++) if (all[i].userData.s0) all[i].scale.copy(all[i].userData.s0); }
+
+    // ── sound: short effects (always) and Thai narration (when switched on) ──
+    var actx = null;
+    function tone(freq, t0, dur, type, vol) {
+      try {
+        actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+        if (actx.state === 'suspended') actx.resume();
+        var o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + t0;
+        o.type = type || 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur + 0.05);
+      } catch (e) {}
+    }
+    var sfx = {
+      tap:   function () { tone(660, 0, 0.08, 'triangle', 0.1); },
+      right: function () { tone(784, 0, 0.14, 'triangle'); tone(1175, 0.11, 0.25, 'triangle'); },
+      wrong: function () { tone(196, 0, 0.22, 'sawtooth', 0.08); },
+      win:   function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone(f, i * 0.12, 0.3, 'triangle'); }); }
+    };
+    var canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+    function speak(text, done) {
+      if (!st.voice || !canSpeak) { if (done) done(false); return; }
+      try {
+        speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(text); u.lang = 'th-TH'; u.rate = 0.95;
+        u.onend = function () { if (done) done(true); }; u.onerror = function () { if (done) done(false); };
+        speechSynthesis.speak(u);
+      } catch (e) { if (done) done(false); }
+    }
+    function hush() { try { if (canSpeak) speechSynthesis.cancel(); } catch (e) {} }
+
+    // ── sparkles / confetti on a 2D canvas above the camera view ──
+    var fxc = $('fx'), fxx = fxc.getContext('2d'), bits = [];
+    function sizeFx() { fxc.width = innerWidth; fxc.height = innerHeight; }
+    sizeFx(); addEventListener('resize', sizeFx);
+    function burst(x, y, n, kind) {
+      var cols = kind === 'star' ? ['#ffd54a', '#fff3b0', '#ffb300'] : ['#ffd54a', '#4fc3f7', '#81c784', '#ff8a65', '#ba68c8', '#ffffff'];
+      for (var i = 0; i < n; i++) {
+        var a = Math.random() * 6.283, v = (kind === 'rain' ? 2 : 3) + Math.random() * 7;
+        bits.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (kind === 'rain' ? 0 : 3), r: 3 + Math.random() * 5,
+                    c: cols[i % cols.length], life: 1, spin: Math.random() * 6, star: kind === 'star' });
+      }
+    }
+    function confetti() { for (var i = 0; i < 5; i++) setTimeout(function () { burst(innerWidth * (0.15 + Math.random() * 0.7), innerHeight * 0.3, 40); }, i * 180); }
+    function drawFx() {
+      fxx.clearRect(0, 0, fxc.width, fxc.height);
+      for (var i = bits.length - 1; i >= 0; i--) {
+        var b = bits[i]; b.x += b.vx; b.y += b.vy; b.vy += 0.22; b.vx *= 0.985; b.life -= 0.012; b.spin += 0.2;
+        if (b.life <= 0 || b.y > fxc.height + 20) { bits.splice(i, 1); continue; }
+        fxx.globalAlpha = Math.min(1, b.life * 1.6); fxx.fillStyle = b.c;
+        fxx.save(); fxx.translate(b.x, b.y); fxx.rotate(b.spin);
+        if (b.star) { fxx.beginPath(); for (var k = 0; k < 10; k++) { var rr = k % 2 ? b.r * 0.45 : b.r * 1.1, an = k * 0.6283; fxx.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); } fxx.fill(); }
+        else fxx.fillRect(-b.r, -b.r * 0.5, b.r * 2, b.r);
+        fxx.restore();
+      }
+      fxx.globalAlpha = 1;
+    }
+
+    // ── the card at the bottom of the screen ──
+    function card(icon, title, text, cls) {
+      $('cardIcon').textContent = icon; $('cardTitle').textContent = title; $('cardText').textContent = text;
+      $('card').className = cls || ''; $('card').style.display = 'block';
+    }
+    function chips() {
+      var h = '';
+      if (st.mode === 'story') {
+        for (var i = 0; i <= STEPS.length; i++)
+          h += '<button class="chip' + (i === st.step ? ' on' : '') + '" data-step="' + i + '">' + (i < STEPS.length ? (i + 1) : 'สรุป') + '</button>';
+      } else if (st.mode === 'quiz') {
+        for (var k = 0; k < STEPS.length; k++) h += '<span class="star' + (st.quiz.solved[STEPS[k].g] ? ' on' : '') + '">★</span>';
+      }
+      $('chips').innerHTML = h;
+    }
+    function buttons() {
+      $('bStory').textContent = st.mode === 'story' ? (st.auto ? '⏸ หยุด' : '▶ เล่นต่อ') : '▶ เล่าเรื่อง';
+      $('bQuiz').textContent = st.mode === 'quiz' ? '✕ ออกจากภารกิจ' : '🎯 ภารกิจ';
+      $('bStory').style.display = st.mode === 'quiz' ? 'none' : '';
+      $('bQuiz').style.display = st.mode === 'story' ? 'none' : '';
+      $('bClose').style.display = st.mode === 'story' ? '' : 'none';
+      $('bVoice').textContent = st.voice ? '🔊' : '🔇';
+      $('bVoice').style.display = canSpeak ? '' : 'none';
+    }
+
+    // ── story mode ──
+    function showStep(i) {
+      clearTimeout(timer); st.step = i; resetScale(); applyView();
+      var s = i < STEPS.length ? STEPS[i] : SUMMARY;
+      card(s.icon, (i < STEPS.length ? (i + 1) + '. ' : '') + s.title, s.text);
+      if (i < STEPS.length) pulse(s.g, 60000);
+      chips(); buttons();
+      speak(s.title + ' ' + s.text, function (spoke) {
+        if (!st.auto || st.mode !== 'story' || st.step !== i) return;
+        if (i >= STEPS.length) { st.auto = false; buttons(); return; }
+        timer = setTimeout(function () { if (st.auto && st.mode === 'story' && st.step === i) showStep(i + 1); }, spoke ? 900 : 5500);
+      });
+    }
+    function startStory() { st.mode = 'story'; st.auto = true; st.quiz = null; showStep(0); }
+    function leave() {
+      clearTimeout(timer); hush(); st.mode = 'free'; st.auto = false; st.quiz = null; pulseG = null;
+      resetScale(); applyView(); $('card').style.display = 'none'; chips(); buttons();
+    }
+
+    // ── mission mode: read the clue, tap the right part of the model; each right answer adds its label to the cycle ──
+    function ask() {
+      var q = st.quiz, s = STEPS[q.i];
+      q.wrong = 0; q.lock = false;
+      card('🎯', 'ภารกิจที่ ' + (q.i + 1) + ' จาก ' + STEPS.length, s.q + ' — แตะที่โมเดลเลย!');
+      chips(); buttons(); speak(s.q);
+    }
+    function startQuiz() { hush(); clearTimeout(timer); st.mode = 'quiz'; st.auto = false; st.quiz = { i: 0, solved: {}, first: 0, wrong: 0, lock: false }; resetScale(); pulseG = null; applyView(); ask(); }
+    function answer(g, x, y) {
+      var q = st.quiz, s = STEPS[q.i];
+      if (!q || q.lock || q.done) return;
+      var ok = g === s.g || (ACCEPT[s.g] && ACCEPT[s.g].indexOf(g) >= 0);
+      if (ok) {
+        q.lock = true; q.solved[s.g] = true; if (!q.wrong) q.first++;
+        sfx.right(); burst(x, y, 26, 'star'); applyView(); pulse(s.g, 2600);
+        card('✅', 'ถูกต้อง! ' + s.title, s.text, 'ok'); chips(); speak('ถูกต้อง ' + s.text);
+        timer = setTimeout(function () {
+          resetScale(); pulseG = null;
+          if (++q.i < STEPS.length) ask(); else finish();
+        }, 3200);
+      } else {
+        q.wrong++; sfx.wrong();
+        card('🤔', 'ยังไม่ใช่ ลองใหม่อีกครั้งนะ', q.wrong >= 2 ? s.hint : s.q, 'no');
+        $('card').classList.remove('shake'); void $('card').offsetWidth; $('card').classList.add('shake');
+      }
+    }
+    function finish() {
+      var q = st.quiz; q.done = true; sfx.win(); confetti();
+      card('🎉', 'สำเร็จ! ต่อวัฏจักรน้ำได้ครบวงจร', 'ตอบถูกตั้งแต่ครั้งแรก ' + q.first + ' จาก ' + STEPS.length + ' ข้อ — ' + SUMMARY.text, 'ok');
+      chips(); speak('เก่งมาก ' + SUMMARY.text);
+    }
+
+    // ── tapping the model ──
+    var ray = new T.Raycaster(), ndc = new T.Vector2(), v3 = new T.Vector3();
+    function cam() { return document.querySelector('a-camera').getObject3D('camera'); }
+    function toScreen(obj) {
+      var r = scene.canvas.getBoundingClientRect(); obj.getWorldPosition(v3); v3.project(cam());
+      return { x: r.left + (v3.x + 1) / 2 * r.width, y: r.top + (1 - v3.y) / 2 * r.height };
+    }
+    function pick(x, y, want) {
+      if (!root || !shown(root)) return null;
+      var r = scene.canvas.getBoundingClientRect();
+      ndc.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height * 2 - 1));
+      ray.setFromCamera(ndc, cam());
+      var hits = ray.intersectObject(root, true), first = null;
+      for (var i = 0; i < hits.length; i++) if (shown(hits[i].object)) { first = hits[i].object; break; }
+      var g = first ? groupOf(first) : null;
+      // In a mission, be kind to small fingers: the wanted part also counts when it is just behind what was touched
+      // (the river runs between the trees) or within 44 px of the touch.
+      if (want && g !== want) {
+        for (var n = 0, c = 0; n < hits.length && c < 4; n++) if (shown(hits[n].object)) { c++; if (groupOf(hits[n].object) === want) return want; }
+        for (var w = 0; w < all.length; w++) {
+          var ow = all[w]; if (ow.position.lengthSq() === 0 || !shown(ow) || groupOf(ow) !== want) continue;
+          var pw = toScreen(ow); if (Math.hypot(pw.x - x, pw.y - y) < 44) return want;
+        }
+      }
+      if (g) return g;
+      // small parts (river, raindrops, vapour dots) are hard to hit with a finger: take the nearest one within 46 px
+      var best = null, bd = 46;
+      for (var k = 0; k < all.length; k++) {
+        var o = all[k]; if (!o.isMesh && !o.children.length) continue;
+        if (o.position.lengthSq() === 0 || !shown(o)) continue;
+        var gg = groupOf(o); if (!gg) continue;
+        var p = toScreen(o), d = Math.hypot(p.x - x, p.y - y);
+        if (d < bd) { bd = d; best = gg; }
+      }
+      return best || (first ? 'other' : null);
+    }
+    function tap(x, y) {
+      if (!st.ready || !st.popped) return;
+      var g = pick(x, y, st.mode === 'quiz' && st.quiz && !st.quiz.done ? STEPS[st.quiz.i].g : null);
+      if (st.mode === 'quiz') { if (g) answer(g, x, y); return; }
+      if (!g || g === 'other') return;
+      // free / story: tapping a part explains it
+      sfx.tap(); burst(x, y, 10, 'star');
+      for (var i = 0; i < STEPS.length; i++) if (STEPS[i].g === g) {
+        if (st.mode === 'story') { st.auto = false; showStep(i); }
+        else { var s = STEPS[i]; card(s.icon, s.title, s.text); pulse(g, 3000); speak(s.title + ' ' + s.text); clearTimeout(timer); timer = setTimeout(function () { if (st.mode === 'free') { $('card').style.display = 'none'; resetScale(); pulseG = null; } }, 6000); }
+      }
+    }
+
+    // ── buttons ──
+    $('bStory').onclick = function () {
+      sfx.tap();
+      if (st.mode !== 'story') return startStory();
+      st.auto = !st.auto; buttons();
+      if (st.auto) showStep(st.step >= STEPS.length ? 0 : st.step); else { clearTimeout(timer); hush(); }
+    };
+    $('bClose').onclick = function () { sfx.tap(); leave(); };
+    $('bQuiz').onclick = function () { sfx.tap(); if (st.mode === 'quiz') leave(); else startQuiz(); };
+    $('bVoice').onclick = function () {
+      st.voice = !st.voice; buttons();
+      if (!st.voice) return hush();
+      speak(st.mode === 'quiz' && st.quiz && !st.quiz.done ? STEPS[st.quiz.i].q : st.mode === 'story' ? $('cardTitle').textContent + ' ' + $('cardText').textContent : 'เปิดเสียงบรรยายแล้ว');
+    };
+    $('chips').onclick = function (e) {
+      var b = e.target.closest ? e.target.closest('[data-step]') : null; if (!b) return;
+      sfx.tap(); st.auto = false; showStep(+b.getAttribute('data-step'));
+    };
+    $('card').onclick = function (e) {
+      if (st.mode === 'quiz' && st.quiz && st.quiz.done && !(e.target.closest && e.target.closest('.chip'))) startQuiz();
+    };
+
+    // ── every frame: entrance pop, pulsing of the part in focus, sparkles ──
+    var popT0 = 0, popDur = 900, popFrom = 0.001;
+    function frame() {
+      requestAnimationFrame(frame);
+      var now = performance.now();
+      if (popT0) {
+        var t = Math.min(1, (now - popT0) / popDur), c1 = 1.70158, c3 = c1 + 1;
+        var ease = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);                  // ease-out-back: grows past full size, settles
+        S.popK = Math.max(0.001, popFrom + (1 - popFrom) * ease);
+        if (t >= 1) { popT0 = 0; S.popK = 1; }
+      }
+      if (pulseG && root) {
+        if (now > pulseUntil) { resetScale(); pulseG = null; }
+        else {
+          var k = 1 + 0.14 * (0.5 + 0.5 * Math.sin(now / 130)), G = GROUPS[pulseG];
+          each([G.label].concat(G.pulse), function (o) { o.scale.copy(o.userData.s0).multiplyScalar(k); });
+        }
+      }
+      if (bits.length || fxc.dataset.dirty) { drawFx(); fxc.dataset.dirty = bits.length ? '1' : ''; }
+    }
+    frame();
+
+    return {
+      tap: tap,
+      // called the first time the card is recognised: the model pops up out of the card
+      pop: function () {
+        if (st.popped) return; st.popped = true; popFrom = 0.001; popDur = 900; S.popK = popFrom; popT0 = performance.now();
+        burst(innerWidth / 2, innerHeight * 0.42, 60); sfx.right();
+        setTimeout(function () { $('dock').style.display = 'block'; buttons(); }, 700);
+      },
+      // a small bounce when the model jumps off the card / back onto it
+      bump: function () { if (!st.popped) return; popFrom = 0.7; popDur = 380; S.popK = popFrom; popT0 = performance.now(); },
+      api: { pick: pick, toScreen: function (name) { var o = null; each([name], function (x) { o = o || x; }); return o ? toScreen(o) : null; }, startQuiz: startQuiz, startStory: startStory, showStep: showStep }
+    };
+  }
+
   function buildScene(withAnim) {
     var qq = new URLSearchParams(location.search);
     var HL = +(qq.get('hl') || 1.0), DL = +(qq.get('dl') || 1.0);
@@ -136,47 +486,118 @@
     //  - card facing the camera (held up / on a screen): the model lines up with the printed picture
     //  - card lying flat (on the palm / on a table):       the model stands up on the card
     // Pose = rotation about the card's x axis, from STAND (32 deg) to FLAT (90 deg), following the card's tilt.
+    var scene = document.querySelector('a-scene');
     var q = new URLSearchParams(location.search);
     var STAND = { rot: 32, s: 1.35, y: -0.26, z: 0.02 }, FLAT = { rot: 90, s: 1.5, y: 0, z: 0.01 };
     var fixed = q.get('mode');            // ?mode=stand / ?mode=flat pins the pose (for testing)
-    var tilt = 0, T = AFRAME.THREE;
+    var tilt = 0, T = AFRAME.THREE, S = { popK: 1 };
     function setPose(rot) {
       var t = Math.min(1, Math.max(0, (rot - STAND.rot) / (FLAT.rot - STAND.rot)));
       var e = $('pose').object3D, s = STAND.s + (FLAT.s - STAND.s) * t;
       e.rotation.set(T.MathUtils.degToRad(rot), 0, 0);
       e.position.set(0, STAND.y + (FLAT.y - STAND.y) * t, STAND.z + (FLAT.z - STAND.z) * t);
-      e.scale.set(s, s, s);
+      e.scale.set(s * S.popK, s * S.popK, s * S.popK);
     }
     setPose(fixed === 'flat' ? FLAT.rot : STAND.rot);
+    // After the card has been seen once, the model no longer needs it: when the card leaves the view the model
+    // is "pulled out" and floats in the middle of the screen (drag = turn, pinch = zoom). Seeing the card again
+    // puts it back on the card.
+    var show = initShow(S, scene, T); window.__ar.api = show.api;
+    var poseObj = $('pose').object3D, targetObj = $('target').object3D;
+    var floatGrp = new T.Group(); scene.object3D.add(floatGrp);
+    var everFound = false, firstSeen = 0, lastSeen = 0, held = false, locked = false;
+    var yaw = -0.35, pitch = 0.5, zoom = 1;
+    function setHeld(on) {
+      if (held === on) return;
+      held = on; window.__held = on; show.bump();
+      (on ? floatGrp : targetObj).add(poseObj);
+      $('mat').object3D.visible = !on;
+      $('held').style.display = on ? 'block' : 'none';
+      if (on) $('hint').classList.add('found');
+      else { poseObj.rotation.set(0, 0, 0); setPose(STAND.rot + tilt); }
+    }
     function follow() {
       requestAnimationFrame(follow);
-      var o = $('target').object3D;
-      if (fixed || !o || !o.visible) return;
-      var m = o.matrix.elements;
-      var y = new T.Vector3(m[4], m[5], m[6]).normalize(), z = new T.Vector3(m[8], m[9], m[10]).normalize();
-      var d = new T.Vector3(-m[12], -m[13], -m[14]).normalize();       // from the card towards the camera
-      var deg = T.MathUtils.radToDeg(Math.atan2(-d.dot(y), d.dot(z)));  // > 0 when the card's top edge leans away
-      if (!isFinite(deg)) return;
-      tilt += (deg - tilt) * 0.12;                                      // smooth out tracking jitter
-      setPose(Math.min(FLAT.rot, Math.max(12, STAND.rot + tilt)));
-      window.__tilt = tilt;
+      var now = performance.now();
+      if (targetObj.visible) {
+        if (!everFound) { firstSeen = now; show.pop(); setTimeout(function () { $('bPin').style.display = 'block'; }, 900); }
+        everFound = true; lastSeen = now;
+      }
+      // Card in view -> the model sits on the card. Card out of view -> the model floats on the screen.
+      // "Pin to the screen" keeps it floating even when the card is in view.
+      if (targetObj.visible && !locked) {
+        if (held) setHeld(false);
+        if (fixed) return;
+        var m = targetObj.matrix.elements;
+        var y = new T.Vector3(m[4], m[5], m[6]).normalize(), z = new T.Vector3(m[8], m[9], m[10]).normalize();
+        var d = new T.Vector3(-m[12], -m[13], -m[14]).normalize();       // from the card towards the camera
+        var deg = T.MathUtils.radToDeg(Math.atan2(-d.dot(y), d.dot(z)));  // > 0 when the card's top edge leans away
+        if (!isFinite(deg)) return;
+        tilt += (deg - tilt) * 0.12;                                      // smooth out tracking jitter
+        setPose(Math.min(FLAT.rot, Math.max(12, STAND.rot + tilt)));
+        window.__tilt = tilt;
+        return;
+      }
+      if (!everFound) return;
+      if (!held) {
+        if (!locked && now - lastSeen < (now - firstSeen < 6000 ? 3000 : 900)) return;   // a short loss of the card: wait (longer right after the first scan)
+        setHeld(true);
+      }
+      // fit the model (0.52 wide, 0.44 tall) to ~80% of the screen width, in front of the camera
+      var cam = document.querySelector('a-camera').getObject3D('camera');
+      var halfH = Math.tan(T.MathUtils.degToRad(cam.fov) / 2), halfW = halfH * cam.aspect;
+      var dist = Math.max(0.52 / 0.8 / (2 * halfW), 0.75 / 0.8 / (2 * halfH));
+      // MindAR's camera works in pixel-sized units (near plane = 10), so the floating model is placed far away and scaled up
+      var K = 1000;
+      floatGrp.scale.set(K, K, K);
+      floatGrp.position.set(0, 0.12 * halfH * dist * K, -dist * K);
+      poseObj.position.set(0, -0.2 * zoom, 0);
+      poseObj.rotation.set(pitch, yaw, 0, 'XYZ');
+      poseObj.scale.set(zoom * S.popK, zoom * S.popK, zoom * S.popK);
     }
+    // touch: one finger turns the model, two fingers zoom (only while it floats on the screen)
+    var pts = {}, pinch0 = 0, zoom0 = 1;
+    function dist2() { var k = Object.keys(pts); return Math.hypot(pts[k[0]].x - pts[k[1]].x, pts[k[0]].y - pts[k[1]].y); }
+    window.addEventListener('pointerdown', function (e) {
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: performance.now(), onModel: $('stage').contains(e.target) };
+      if (Object.keys(pts).length === 2) { pinch0 = dist2(); zoom0 = zoom; }
+    });
+    window.addEventListener('pointermove', function (e) {
+      var p = pts[e.pointerId]; if (!p || !held) return;
+      var n = Object.keys(pts).length;
+      if (n === 1) {
+        yaw += (e.clientX - p.x) * 0.01;
+        pitch = Math.min(1.35, Math.max(0.05, pitch + (e.clientY - p.y) * 0.006));
+      }
+      p.x = e.clientX; p.y = e.clientY;
+      if (n === 2 && pinch0 > 0) zoom = Math.min(2.5, Math.max(0.5, zoom0 * dist2() / pinch0));
+    });
+    function up(e) {
+      var p = pts[e.pointerId]; delete pts[e.pointerId]; pinch0 = 0;
+      // a short touch that did not move is a tap on the model
+      if (p && p.onModel && e.type === 'pointerup' && performance.now() - p.t0 < 600 && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 12)
+        show.tap(e.clientX, e.clientY);
+    }
+    window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    $('bPin').onclick = function () {
+      locked = !locked;
+      $('bPin').textContent = locked ? '🎴 กลับไปที่การ์ด' : '📌 ตรึงไว้บนจอ';
+    };
     follow();
     // draw the mat first and never let it hide the model (part of the model sits behind the card plane)
     $('mat').addEventListener('loaded', function () {
       var m = $('mat').getObject3D('mesh');
       if (m) { m.renderOrder = -1; m.material.depthTest = false; m.material.depthWrite = false; }
     });
-    var scene = document.querySelector('a-scene');
     var target = $('target');
     target.addEventListener('targetFound', function () { $('hint').classList.add('found'); });
-    target.addEventListener('targetLost', function () { $('hint').classList.remove('found'); });
+    
     scene.addEventListener('arReady', function () {
       $('loading').style.display = 'none';
       setTimeout(function () {
         window.dispatchEvent(new Event('resize'));
         var v = document.querySelector('video');
-        $('dbg').textContent = 'v5 · ' + (v ? ('cam ' + v.videoWidth + 'x' + v.videoHeight +
+        $('dbg').textContent = 'v7 · ' + (v ? ('cam ' + v.videoWidth + 'x' + v.videoHeight +
           ' box ' + v.offsetWidth + 'x' + v.offsetHeight + ' z' + getComputedStyle(v).zIndex) : 'no video');
       }, 1500);
     });
