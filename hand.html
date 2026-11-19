@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>วัฏจักรน้ำ AR บนการ์ด</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000;
+    font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', sans-serif; }
+  #hint { position: fixed; left: 12px; right: 12px; bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 10; background: rgba(255,255,255,.94); color: #0b2545; border-radius: 16px;
+    padding: 12px 16px; font-size: 17px; line-height: 1.45; box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    transition: opacity .4s; }
+  #hint b { color: #1d6fb8; }
+  #hint.found { opacity: .0; pointer-events: none; }
+  #err { display: none; position: fixed; inset: 0; z-index: 20; background: #eaf5ff; color: #0b2545;
+    padding: 28px 22px; font-size: 18px; line-height: 1.5; }
+  #err a { display: inline-block; margin-top: 14px; background: #1d6fb8; color: #fff; padding: 12px 18px;
+    border-radius: 12px; text-decoration: none; font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้</div>
+<div id="err">
+  <b>เปิดกล้องไม่ได้</b><br>
+  กรุณากด "อนุญาต" ให้ใช้กล้อง แล้วโหลดหน้านี้ใหม่ หรือเปิดหน้านี้ใน Chrome (Android) หรือ Safari (iPhone)
+  <br><a href="viewer.html">ดูแบบ 3 มิติโดยไม่ใช้กล้อง</a>
+</div>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; uiError: no"
+  color-space="sRGB"
+  renderer="colorManagement: true; physicallyCorrectLights: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
+  <a-assets>
+    <a-asset-item id="wc" src="watercycle.glb"></a-asset-item>
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-entity light="type: hemisphere; color: #ffffff; groundColor: #8899aa; intensity: 2.2"></a-entity>
+  <a-entity light="type: directional; color: #ffffff; intensity: 2.5" position="0.5 1 1.5"></a-entity>
+
+  <!-- target width = 1 unit (the picture's width); the model is 0.5 m wide, so scale 1.8 fills the picture -->
+  <a-entity id="target" mindar-image-target="targetIndex: 0">
+    <a-gltf-model src="#wc" rotation="90 0 0" position="0 0 0" scale="1.8 1.8 1.8"
+      animation-mixer="loop: repeat"></a-gltf-model>
+  </a-entity>
+</a-scene>
+
+<script>
+  var hint = document.getElementById('hint');
+  var target = document.getElementById('target');
+  target.addEventListener('targetFound', function () { hint.classList.add('found'); });
+  target.addEventListener('targetLost', function () { hint.classList.remove('found'); });
+  document.querySelector('a-scene').addEventListener('arError', function () {
+    document.getElementById('err').style.display = 'block';
+  });
+  setTimeout(function () {
+    if (!window.AFRAME || !AFRAME.components['mindar-image']) {
+      document.getElementById('err').style.display = 'block';
+      document.querySelector('#err b').textContent = 'โหลดระบบ AR ไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต)';
+    }
+  }, 8000);
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>วัฏจักรน้ำ AR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap">
+<!-- Google model-viewer, pinned version -->
+<script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js" id="mvScript"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Sarabun', 'Noto Sans Thai', 'Leelawadee UI', 'Thonburi', 'Tahoma', 'Loma', sans-serif;
+    color: #12324f; background: linear-gradient(#5fb4ee, #cdeafd 40%, #f2f9ff); min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom)); }
+  h1 { margin: 4px 0 2px; text-align: center; font-size: 26px; line-height: 1.3; color: #0b3a66; }
+  .sub { margin: 0 0 10px; text-align: center; font-size: 15px; color: #0b3a66; opacity: .85; }
+  .stage {
+    position: relative; width: 100%; height: 58vh; min-height: 340px; max-height: 620px;
+    border-radius: 22px; overflow: hidden; background: linear-gradient(#8fd0f7, #e9f6ff);
+    box-shadow: 0 8px 26px rgba(18,50,79,0.22);
+  }
+  model-viewer { width: 100%; height: 100%; display: block; --poster-color: transparent; background: transparent; }
+  .ar-btn {
+    position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+    font-family: inherit; font-size: 20px; font-weight: 700; line-height: 1.2;
+    min-height: 58px; padding: 10px 22px; border: 0; border-radius: 999px; cursor: pointer;
+    background: #1565c0; color: #fff; box-shadow: 0 6px 18px rgba(11,58,102,0.35);
+    display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; max-width: calc(100% - 24px);
+  }
+  .ar-btn svg { width: 26px; height: 26px; flex: none; }
+  .ar-btn:active { transform: translateX(-50%) translateY(1px); }
+  .status {
+    position: absolute; left: 10px; right: 10px; top: 10px; padding: 8px 12px; border-radius: 14px;
+    background: rgba(255,255,255,0.94); font-size: 15px; line-height: 1.45; text-align: center;
+    box-shadow: 0 3px 10px rgba(18,50,79,0.15);
+  }
+  .card {
+    margin-top: 12px; background: rgba(255,255,255,0.96); border-radius: 18px; padding: 12px 16px;
+    box-shadow: 0 4px 16px rgba(18,50,79,0.14); font-size: 17px; line-height: 1.6;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 19px; color: #0b3a66; }
+  .card ol { margin: 4px 0 2px; padding-left: 1.4em; }
+  .card li { margin: 2px 0; }
+  .link-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px;
+    min-height: 56px; padding: 10px 16px; border-radius: 16px; text-decoration: none;
+    background: #fff; color: #0b3a66; font-weight: 700; font-size: 18px; text-align: center;
+    box-shadow: 0 4px 14px rgba(18,50,79,0.16); border: 2px solid #1565c0;
+  }
+  .note { font-size: 14px; color: #3d5a75; margin: 10px 4px 0; line-height: 1.5; }
+  #fallback { display: none; }
+  #fallback.show { display: block; position: absolute; inset: 0; }
+  .fb {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 20px; text-align: center; font-size: 17px; line-height: 1.55; background: linear-gradient(#8fd0f7, #e9f6ff);
+  }
+  .fb a { min-height: 54px; display: inline-flex; align-items: center; padding: 10px 20px; border-radius: 999px;
+    background: #1565c0; color: #fff; font-weight: 700; text-decoration: none; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>วัฏจักรน้ำ 3 มิติ แบบ AR</h1>
+  <p class="sub">วางโมเดลวัฏจักรน้ำบนโต๊ะจริงผ่านกล้องมือถือ · วิทยาศาสตร์ ป.5</p>
+
+  <div class="stage" id="stage">
+    <model-viewer id="mv"
+      src="watercycle.glb"
+      alt="โมเดล 3 มิติ วัฏจักรน้ำ มีทะเล ภูเขา แม่น้ำ ต้นไม้ ดวงอาทิตย์ เมฆ ฝน และชั้นน้ำใต้ดิน"
+      ar ar-modes="webxr scene-viewer quick-look"
+      camera-controls autoplay shadow-intensity="1" ar-placement="floor"
+      ar-scale="auto" camera-orbit="0deg 72deg auto" touch-action="pan-y"
+      interaction-prompt="auto" environment-image="neutral" exposure="1.05"
+      poster="poster.jpg">
+      <button slot="ar-button" class="ar-btn" id="arBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.6 3.7L12 11.7 5.4 8 12 4.3zM5 9.7l6 3.4v6.6l-6-3.4V9.7zm8 10v-6.6l6-3.4v6.6l-6 3.4z"/></svg>
+        ดูแบบ AR บนโต๊ะจริง
+      </button>
+      <div class="status" id="status" hidden></div>
+    </model-viewer>
+
+    <div id="fallback">
+      <div class="fb">
+        <div><b>โหลดโหมด AR ไม่สำเร็จ</b><br>อาจเป็นเพราะอินเทอร์เน็ตช้าหรือเบราว์เซอร์ไม่รองรับ<br>ยังดูโมเดล 3 มิติแบบเล่าทีละขั้นได้ที่ปุ่มด้านล่าง</div>
+        <a href="viewer.html">เปิดโมเดล 3 มิติ</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>วิธีดูแบบ AR</h2>
+    <ol>
+      <li>กดปุ่ม <b>ดูแบบ AR บนโต๊ะจริง</b> แล้วอนุญาตให้ใช้กล้อง</li>
+      <li>หันกล้องไปที่ <b>พื้นโต๊ะ</b> ที่มีแสงสว่างพอ</li>
+      <li><b>ขยับมือถือช้า ๆ</b> ไปมา จนระบบหาพื้นโต๊ะเจอ</li>
+      <li><b>แตะที่หน้าจอ</b> เพื่อวางโมเดลบนโต๊ะ</li>
+      <li><b>ถ่างหรือหุบสองนิ้ว</b> เพื่อย่อหรือขยาย ใช้นิ้วเดียวลากเพื่อเลื่อนหรือหมุนโมเดล</li>
+    </ol>
+  </div>
+
+  <a class="link-btn" href="viewer.html">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="#1565c0" d="M8 5v14l11-7z"/></svg>
+    เปิดโมเดล 3 มิติแบบเล่าทีละขั้น (มีคำอธิบาย)
+  </a>
+  <p class="note">โมเดลแสดง 6 กระบวนการ: การระเหย · การคายน้ำของพืช · การควบแน่น · หยาดน้ำฟ้า (ฝน) · น้ำไหลกลับสู่แหล่งน้ำ · น้ำซึมลงดินเป็นน้ำใต้ดิน
+    ถ้ามือถือไม่รองรับ AR ยังหมุนดูโมเดลในกรอบด้านบนได้ตามปกติ</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var mv = document.getElementById('mv');
+  var statusEl = document.getElementById('status');
+  var shown = false;
+  function say(msg) { statusEl.textContent = msg; statusEl.hidden = !msg; }
+  function showFallback() {
+    if (shown) return; shown = true;
+    document.getElementById('fallback').className = 'show';
+    mv.style.display = 'none';
+  }
+  // 1) module script failed to download (offline / blocked CDN)
+  var s = document.getElementById('mvScript');
+  if (s) s.addEventListener('error', showFallback);
+  // 2) script never registered the element (old browser, slow network) -> offer the self-contained viewer
+  setTimeout(function () { if (!window.customElements || !customElements.get('model-viewer')) showFallback(); }, 9000);
+
+  if (!window.customElements) { showFallback(); return; }
+  customElements.whenDefined('model-viewer').then(function () {
+    mv.addEventListener('load', function () {
+      // canActivateAR is false on desktops and phones without ARCore / ARKit support
+      if (!mv.canActivateAR) say('มือถือ/เบราว์เซอร์นี้ยังเปิด AR ไม่ได้ แต่ใช้นิ้วหมุนและซูมดูโมเดลได้');
+      else say('');
+    });
+    mv.addEventListener('error', function () {
+      say('โหลดไฟล์โมเดลไม่สำเร็จ ลองโหลดหน้าใหม่ หรือกดเปิดโมเดล 3 มิติด้านล่าง');
+    });
+    mv.addEventListener('ar-status', function (e) {
+      var st = e.detail && e.detail.status;
+      if (st === 'session-started') say('ขยับมือถือช้า ๆ เพื่อหาพื้นโต๊ะ แล้วแตะเพื่อวางโมเดล');
+      else if (st === 'object-placed') say('');
+      else if (st === 'failed') say('เปิด AR ไม่สำเร็จ ลองอีกครั้งในที่มีแสงสว่าง หรือใช้ Chrome (Android) / Safari (iPhone)');
+      else if (st === 'not-presenting') say('');
+    });
+  });
+})();
+</script>
+</body>
+</html>
