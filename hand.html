@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #000;
+  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
     font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', sans-serif; }
   #stage { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
   #hint { position: fixed; left: 12px; right: 12px; bottom: max(16px, env(safe-area-inset-bottom));
@@ -34,7 +34,7 @@
 <body>
 <div id="loading">กำลังโหลดระบบ AR…<div id="step" style="font-size:15px;color:#557;margin-top:6px"></div>
   <div class="bar"><i id="prog"></i></div></div>
-<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้</div>
+<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้<div id="dbg" style="font-size:11px;color:#889;margin-top:4px">v4</div></div>
 <div id="err">
   <b id="errTitle">เปิดกล้องไม่ได้</b><br>
   <span id="errMsg">กรุณากด "อนุญาต" ให้ใช้กล้อง แล้วโหลดหน้านี้ใหม่ หรือเปิดหน้านี้ใน Chrome (Android) หรือ Safari (iPhone)</span>
@@ -45,7 +45,7 @@
 
 <script>
 (function () {
-  var V = '?v=3';
+  var V = '?v=4';
   // Each library has several mirrors; the first one that loads AND registers what we need wins.
   var LIBS = [
     { name: 'A-Frame', ok: function () { return !!window.AFRAME; }, urls: [
@@ -130,7 +130,12 @@
     target.addEventListener('targetLost', function () { $('hint').classList.remove('found'); });
     scene.addEventListener('arReady', function () {
       $('loading').style.display = 'none';
-      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 300);
+      setTimeout(function () {
+        window.dispatchEvent(new Event('resize'));
+        var v = document.querySelector('video');
+        $('dbg').textContent = 'v4 · ' + (v ? ('cam ' + v.videoWidth + 'x' + v.videoHeight +
+          ' box ' + v.offsetWidth + 'x' + v.offsetHeight + ' z' + getComputedStyle(v).zIndex) : 'no video');
+      }, 1500);
     });
     scene.addEventListener('arError', function () {
       log.push('arError');
