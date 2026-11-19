@@ -6,9 +6,6 @@
 <title>วัฏจักรน้ำ AR บนการ์ด</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #000;
     font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', sans-serif; }
@@ -18,55 +15,156 @@
     transition: opacity .4s; }
   #hint b { color: #1d6fb8; }
   #hint.found { opacity: .0; pointer-events: none; }
+  #loading { position: fixed; inset: 0; z-index: 15; background: #eaf5ff; color: #0b2545;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 18px; text-align: center; padding: 24px; }
+  #loading .bar { width: 70%; max-width: 320px; height: 10px; background: #cfe3f5; border-radius: 6px;
+    overflow: hidden; margin-top: 14px; }
+  #loading .bar i { display: block; height: 100%; width: 0; background: #1d6fb8; transition: width .3s; }
   #err { display: none; position: fixed; inset: 0; z-index: 20; background: #eaf5ff; color: #0b2545;
-    padding: 28px 22px; font-size: 18px; line-height: 1.5; }
-  #err a { display: inline-block; margin-top: 14px; background: #1d6fb8; color: #fff; padding: 12px 18px;
-    border-radius: 12px; text-decoration: none; font-weight: 700; }
+    padding: 28px 22px; font-size: 18px; line-height: 1.5; overflow: auto; }
+  #err a, #err button { display: inline-block; margin: 14px 8px 0 0; background: #1d6fb8; color: #fff;
+    padding: 12px 18px; border: 0; border-radius: 12px; text-decoration: none; font-weight: 700;
+    font: inherit; font-weight: 700; }
+  #err button { background: #2e8b57; }
+  #err small { display: block; margin-top: 18px; color: #557; font-size: 13px; word-break: break-all; }
 </style>
 </head>
 <body>
+<div id="loading">กำลังโหลดระบบ AR…<div id="step" style="font-size:15px;color:#557;margin-top:6px"></div>
+  <div class="bar"><i id="prog"></i></div></div>
 <div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้</div>
 <div id="err">
-  <b>เปิดกล้องไม่ได้</b><br>
-  กรุณากด "อนุญาต" ให้ใช้กล้อง แล้วโหลดหน้านี้ใหม่ หรือเปิดหน้านี้ใน Chrome (Android) หรือ Safari (iPhone)
-  <br><a href="viewer.html">ดูแบบ 3 มิติโดยไม่ใช้กล้อง</a>
+  <b id="errTitle">เปิดกล้องไม่ได้</b><br>
+  <span id="errMsg">กรุณากด "อนุญาต" ให้ใช้กล้อง แล้วโหลดหน้านี้ใหม่ หรือเปิดหน้านี้ใน Chrome (Android) หรือ Safari (iPhone)</span>
+  <br><button onclick="location.reload()">ลองใหม่</button><a href="viewer.html">ดูแบบ 3 มิติโดยไม่ใช้กล้อง</a>
+  <small id="errDetail"></small>
 </div>
-
-<a-scene
-  mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; uiError: no"
-  color-space="sRGB"
-  renderer="colorManagement: true; physicallyCorrectLights: true"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
-  <a-assets>
-    <a-asset-item id="wc" src="watercycle.glb"></a-asset-item>
-  </a-assets>
-
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-  <a-entity light="type: hemisphere; color: #ffffff; groundColor: #8899aa; intensity: 2.2"></a-entity>
-  <a-entity light="type: directional; color: #ffffff; intensity: 2.5" position="0.5 1 1.5"></a-entity>
-
-  <!-- target width = 1 unit (the picture's width); the model is 0.5 m wide, so scale 1.8 fills the picture -->
-  <a-entity id="target" mindar-image-target="targetIndex: 0">
-    <a-gltf-model src="#wc" rotation="90 0 0" position="0 0 0" scale="1.8 1.8 1.8"
-      animation-mixer="loop: repeat"></a-gltf-model>
-  </a-entity>
-</a-scene>
+<div id="stage"></div>
 
 <script>
-  var hint = document.getElementById('hint');
-  var target = document.getElementById('target');
-  target.addEventListener('targetFound', function () { hint.classList.add('found'); });
-  target.addEventListener('targetLost', function () { hint.classList.remove('found'); });
-  document.querySelector('a-scene').addEventListener('arError', function () {
-    document.getElementById('err').style.display = 'block';
-  });
-  setTimeout(function () {
-    if (!window.AFRAME || !AFRAME.components['mindar-image']) {
-      document.getElementById('err').style.display = 'block';
-      document.querySelector('#err b').textContent = 'โหลดระบบ AR ไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต)';
+(function () {
+  var V = '?v=2';
+  // Each library has several mirrors; the first one that loads AND registers what we need wins.
+  var LIBS = [
+    { name: 'A-Frame', ok: function () { return !!window.AFRAME; }, urls: [
+      'https://aframe.io/releases/1.5.0/aframe.min.js',
+      'https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js',
+      'https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-v1.5.0.min.js',
+      'https://unpkg.com/aframe@1.5.0/dist/aframe-master.min.js'
+    ]},
+    { name: 'MindAR', ok: function () { return !!(window.AFRAME && AFRAME.components['mindar-image']); }, urls: [
+      'https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js',
+      'https://unpkg.com/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js',
+      'https://fastly.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js'
+    ]},
+    { name: 'aframe-extras', optional: true,
+      ok: function () { return !!(window.AFRAME && AFRAME.components['animation-mixer']); }, urls: [
+      'https://cdn.jsdelivr.net/npm/aframe-extras@7.2.0/dist/aframe-extras.min.js',
+      'https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@v7.2.0/dist/aframe-extras.min.js',
+      'https://unpkg.com/aframe-extras@7.2.0/dist/aframe-extras.min.js'
+    ]}
+  ];
+  var log = [];
+  var $ = function (id) { return document.getElementById(id); };
+
+  function showErr(title, msg) {
+    $('loading').style.display = 'none';
+    $('errTitle').textContent = title;
+    if (msg) $('errMsg').textContent = msg;
+    $('errDetail').textContent = log.join(' | ') + ' | ' + navigator.userAgent;
+    $('err').style.display = 'block';
+  }
+
+  function loadScript(url, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      var t = setTimeout(function () { reject('timeout'); }, timeoutMs);
+      s.src = url; s.async = false; s.crossOrigin = 'anonymous';
+      s.onload = function () { clearTimeout(t); resolve(); };
+      s.onerror = function () { clearTimeout(t); reject('error'); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function loadLib(lib) {
+    var i = 0;
+    function next() {
+      if (lib.ok()) return Promise.resolve(true);
+      if (i >= lib.urls.length) return Promise.resolve(false);
+      var url = lib.urls[i++];
+      $('step').textContent = lib.name + ' (' + i + '/' + lib.urls.length + ')';
+      return loadScript(url, 25000).then(function () {
+        // give the script a moment to register its components
+        return new Promise(function (r) { setTimeout(r, 50); });
+      }).then(function () {
+        log.push(lib.name + (lib.ok() ? ' ok#' : ' noreg#') + i);
+        return next();
+      }, function (why) {
+        log.push(lib.name + ' ' + why + '#' + i);
+        return next();
+      });
     }
-  }, 8000);
+    return next();
+  }
+
+  function buildScene(withAnim) {
+    $('stage').innerHTML =
+      '<a-scene mindar-image="imageTargetSrc: ./targets.mind' + V + '; filterMinCF: 0.0001; filterBeta: 0.001; uiError: no; uiLoading: yes; uiScanning: no"' +
+      ' color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false"' +
+      ' device-orientation-permission-ui="enabled: false" loading-screen="enabled: false">' +
+      '<a-assets timeout="30000"><a-asset-item id="wc" src="watercycle.glb' + V + '"></a-asset-item></a-assets>' +
+      '<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>' +
+      '<a-entity light="type: hemisphere; color: #ffffff; groundColor: #8899aa; intensity: 2.2"></a-entity>' +
+      '<a-entity light="type: directional; color: #ffffff; intensity: 2.5" position="0.5 1 1.5"></a-entity>' +
+      // target width = 1 unit (picture width); model is ~0.5 m wide, so scale 1.8 fills the picture
+      '<a-entity id="target" mindar-image-target="targetIndex: 0">' +
+      '<a-gltf-model src="#wc" rotation="90 0 0" position="0 0 0" scale="1.8 1.8 1.8"' +
+      (withAnim ? ' animation-mixer="loop: repeat"' : '') + '></a-gltf-model>' +
+      '</a-entity></a-scene>';
+
+    var scene = document.querySelector('a-scene');
+    var target = $('target');
+    target.addEventListener('targetFound', function () { $('hint').classList.add('found'); });
+    target.addEventListener('targetLost', function () { $('hint').classList.remove('found'); });
+    scene.addEventListener('arReady', function () { $('loading').style.display = 'none'; });
+    scene.addEventListener('arError', function () {
+      log.push('arError');
+      showErr('เปิดกล้องไม่ได้');
+    });
+    $('step').textContent = 'กำลังเปิดกล้อง… (กด "อนุญาต")';
+    $('prog').style.width = '90%';
+    setTimeout(function () {
+      if ($('loading').style.display !== 'none' && $('err').style.display !== 'block') {
+        log.push('noArReady');
+        showErr('กล้องยังไม่เริ่มทำงาน', 'ตรวจว่ากด "อนุญาต" ให้ใช้กล้องแล้ว และไม่มีแอปอื่นใช้กล้องอยู่ แล้วกด "ลองใหม่"');
+      }
+    }, 45000);
+  }
+
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    log.push('noGetUserMedia');
+    showErr('เบราว์เซอร์นี้เปิดกล้องไม่ได้',
+      'กรุณาเปิดลิงก์นี้ใน Chrome (Android) หรือ Safari (iPhone) — ถ้าเปิดจาก LINE/Facebook ให้กด ⋮ แล้วเลือก "เปิดในเบราว์เซอร์"');
+    return;
+  }
+
+  $('prog').style.width = '10%';
+  loadLib(LIBS[0]).then(function (ok) {
+    if (!ok) throw 'A-Frame';
+    $('prog').style.width = '40%';
+    return loadLib(LIBS[1]);
+  }).then(function (ok) {
+    if (!ok) throw 'MindAR';
+    $('prog').style.width = '70%';
+    return loadLib(LIBS[2]);
+  }).then(function (animOk) {
+    buildScene(animOk);
+  }).catch(function (which) {
+    showErr('โหลดระบบ AR ไม่สำเร็จ',
+      'โหลด ' + which + ' ไม่ได้ ลองเปลี่ยนเป็น Wi-Fi/4G อีกเครือข่าย แล้วกด "ลองใหม่" (ระหว่างนี้ใช้ปุ่มดูแบบ 3 มิติไปก่อนได้)');
+  });
+})();
 </script>
 </body>
 </html>
