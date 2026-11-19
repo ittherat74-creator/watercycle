@@ -9,7 +9,10 @@
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: transparent;
     font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', sans-serif; }
-  #stage { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+  #stage > video { z-index: 0 !important; }
+  #stage .a-canvas { z-index: 1 !important; background: transparent !important; }
+  .a-enter-vr, .a-enter-ar, .a-orientation-modal { display: none !important; }
   #hint { position: fixed; left: 12px; right: 12px; bottom: max(16px, env(safe-area-inset-bottom));
     z-index: 10; background: rgba(255,255,255,.94); color: #0b2545; border-radius: 16px;
     padding: 12px 16px; font-size: 17px; line-height: 1.45; box-shadow: 0 4px 16px rgba(0,0,0,.3);
@@ -34,7 +37,7 @@
 <body>
 <div id="loading">กำลังโหลดระบบ AR…<div id="step" style="font-size:15px;color:#557;margin-top:6px"></div>
   <div class="bar"><i id="prog"></i></div></div>
-<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้<div id="dbg" style="font-size:11px;color:#889;margin-top:4px">v4</div></div>
+<div id="hint">ส่องกล้องไปที่<b>ภาพวัฏจักรน้ำบนการ์ด</b> ถือให้นิ่ง ห่างประมาณ 30 ซม.<br>โมเดล 3 มิติจะลอยขึ้นมาบนการ์ด เอียงการ์ดเพื่อดูรอบ ๆ ได้<div id="dbg" style="font-size:11px;color:#889;margin-top:4px">v5</div></div>
 <div id="err">
   <b id="errTitle">เปิดกล้องไม่ได้</b><br>
   <span id="errMsg">กรุณากด "อนุญาต" ให้ใช้กล้อง แล้วโหลดหน้านี้ใหม่ หรือเปิดหน้านี้ใน Chrome (Android) หรือ Safari (iPhone)</span>
@@ -45,7 +48,7 @@
 
 <script>
 (function () {
-  var V = '?v=4';
+  var V = '?v=5';
   // Each library has several mirrors; the first one that loads AND registers what we need wins.
   var LIBS = [
     { name: 'A-Frame', ok: function () { return !!window.AFRAME; }, urls: [
@@ -110,20 +113,60 @@
   }
 
   function buildScene(withAnim) {
+    var qq = new URLSearchParams(location.search);
+    var HL = +(qq.get('hl') || 1.0), DL = +(qq.get('dl') || 1.0);
     $('stage').innerHTML =
-      '<a-scene mindar-image="imageTargetSrc: ./targets.mind' + V + '; filterMinCF: 0.0001; filterBeta: 0.001; uiError: no; uiLoading: yes; uiScanning: no"' +
+      '<a-scene mindar-image="imageTargetSrc: ./targets.mind' + V + '; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10; uiError: no; uiLoading: yes; uiScanning: no"' +
       ' color-space="sRGB" renderer="colorManagement: true" vr-mode-ui="enabled: false"' +
       ' device-orientation-permission-ui="enabled: false" loading-screen="enabled: false">' +
       '<a-assets timeout="30000"><a-asset-item id="wc" src="watercycle.glb' + V + '"></a-asset-item></a-assets>' +
       '<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>' +
-      '<a-entity light="type: hemisphere; color: #ffffff; groundColor: #8899aa; intensity: 2.2"></a-entity>' +
-      '<a-entity light="type: directional; color: #ffffff; intensity: 2.5" position="0.5 1 1.5"></a-entity>' +
-      // target width = 1 unit (picture width); model is ~0.5 m wide, so scale 1.8 fills the picture
+      '<a-entity light="type: hemisphere; color: #ffffff; groundColor: #9aa8b5; intensity: ' + HL + '"></a-entity>' +
+      '<a-entity light="type: directional; color: #ffffff; intensity: ' + DL + '" position="0.5 1 1.5"></a-entity>' +
+      // Anchor space: origin = centre of the picture, x right, y up the card, z out of the card; 1 unit = picture width.
+      // Model: 0.52 wide, 0.44 tall, 0.40 deep, origin at the centre of its base.
       '<a-entity id="target" mindar-image-target="targetIndex: 0">' +
-      '<a-gltf-model src="#wc" rotation="90 0 0" position="0 0 0" scale="1.8 1.8 1.8"' +
-      (withAnim ? ' animation-mixer="loop: repeat"' : '') + '></a-gltf-model>' +
+      // sky-coloured mat that covers the printed picture, so the 3D model is not doubled with the print behind it
+      '<a-plane id="mat" width="1" height="0.861" position="0 0 0.002" material="shader: flat; color: #cfe8fb"></a-plane>' +
+      '<a-entity id="pose"><a-gltf-model id="model" src="#wc"' +
+      (withAnim ? ' animation-mixer="loop: repeat"' : '') + '></a-gltf-model></a-entity>' +
       '</a-entity></a-scene>';
 
+    // The model keeps a comfortable 3/4 view however the card is held:
+    //  - card facing the camera (held up / on a screen): the model lines up with the printed picture
+    //  - card lying flat (on the palm / on a table):       the model stands up on the card
+    // Pose = rotation about the card's x axis, from STAND (32 deg) to FLAT (90 deg), following the card's tilt.
+    var q = new URLSearchParams(location.search);
+    var STAND = { rot: 32, s: 1.35, y: -0.26, z: 0.02 }, FLAT = { rot: 90, s: 1.5, y: 0, z: 0.01 };
+    var fixed = q.get('mode');            // ?mode=stand / ?mode=flat pins the pose (for testing)
+    var tilt = 0, T = AFRAME.THREE;
+    function setPose(rot) {
+      var t = Math.min(1, Math.max(0, (rot - STAND.rot) / (FLAT.rot - STAND.rot)));
+      var e = $('pose').object3D, s = STAND.s + (FLAT.s - STAND.s) * t;
+      e.rotation.set(T.MathUtils.degToRad(rot), 0, 0);
+      e.position.set(0, STAND.y + (FLAT.y - STAND.y) * t, STAND.z + (FLAT.z - STAND.z) * t);
+      e.scale.set(s, s, s);
+    }
+    setPose(fixed === 'flat' ? FLAT.rot : STAND.rot);
+    function follow() {
+      requestAnimationFrame(follow);
+      var o = $('target').object3D;
+      if (fixed || !o || !o.visible) return;
+      var m = o.matrix.elements;
+      var y = new T.Vector3(m[4], m[5], m[6]).normalize(), z = new T.Vector3(m[8], m[9], m[10]).normalize();
+      var d = new T.Vector3(-m[12], -m[13], -m[14]).normalize();       // from the card towards the camera
+      var deg = T.MathUtils.radToDeg(Math.atan2(-d.dot(y), d.dot(z)));  // > 0 when the card's top edge leans away
+      if (!isFinite(deg)) return;
+      tilt += (deg - tilt) * 0.12;                                      // smooth out tracking jitter
+      setPose(Math.min(FLAT.rot, Math.max(12, STAND.rot + tilt)));
+      window.__tilt = tilt;
+    }
+    follow();
+    // draw the mat first and never let it hide the model (part of the model sits behind the card plane)
+    $('mat').addEventListener('loaded', function () {
+      var m = $('mat').getObject3D('mesh');
+      if (m) { m.renderOrder = -1; m.material.depthTest = false; m.material.depthWrite = false; }
+    });
     var scene = document.querySelector('a-scene');
     var target = $('target');
     target.addEventListener('targetFound', function () { $('hint').classList.add('found'); });
@@ -133,7 +176,7 @@
       setTimeout(function () {
         window.dispatchEvent(new Event('resize'));
         var v = document.querySelector('video');
-        $('dbg').textContent = 'v4 · ' + (v ? ('cam ' + v.videoWidth + 'x' + v.videoHeight +
+        $('dbg').textContent = 'v5 · ' + (v ? ('cam ' + v.videoWidth + 'x' + v.videoHeight +
           ' box ' + v.offsetWidth + 'x' + v.offsetHeight + ' z' + getComputedStyle(v).zIndex) : 'no video');
       }, 1500);
     });
